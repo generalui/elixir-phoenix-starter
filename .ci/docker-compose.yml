@@ -1,0 +1,77 @@
+version: "3.8"
+
+services:
+  release:
+    # Ensure specific environment variables are ALWAYS available.
+    environment:
+      - ADMIN_USERS=${ADMIN_USERS:-'[]'}
+      - DATABASE_URL=${DATABASE_URL:-nothing_yet}
+      - DATABASE_URL_LEGACY=${DATABASE_URL_LEGACY:-nothing_yet}
+      - ENCRYPTION_KEYS=${ENCRYPTION_KEYS:-oSpY0JP74A662b1bmGYbwv/bwWkbHEWzOGy7luEchAw=}
+      - LEGACY_SODIUM_SECRET_KEY=${LEGACY_SODIUM_SECRET_KEY:-nothing_yet}
+      - MIX_ENV=${MIX_ENV:-dev}
+      - PORT=${PORT:-4000}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:-LLRgjeeWvf1K1U0vsGVCESK4AcTD2lXnL1x13SLiac7XW4UhwW2PWaxE+ejIMeUs}
+    build:
+      context: ./../
+      dockerfile: ./.ci/Dockerfile-release
+      args:
+        DATABASE_URL: ${DATABASE_URL:-nothing_yet}
+        DATABASE_URL_LEGACY: ${DATABASE_URL_LEGACY:-nothing_yet}
+        elixirVersion: ${ELIXIR_VERSION:-1.11.3}
+        ENCRYPTION_KEYS: ${ENCRYPTION_KEYS:-oSpY0JP74A662b1bmGYbwv/bwWkbHEWzOGy7luEchAw=}
+        LEGACY_SODIUM_SECRET_KEY: ${LEGACY_SODIUM_SECRET_KEY:-nothing_yet}
+        MIX_ENV: ${MIX_ENV:-dev}
+        SECRET_KEY_BASE: ${SECRET_KEY_BASE:-LLRgjeeWvf1K1U0vsGVCESK4AcTD2lXnL1x13SLiac7XW4UhwW2PWaxE+ejIMeUs}
+    container_name: ${API_CONTAINER_NAME:-rm-api}
+    image: ${IMAGE_TAG:-eps-api-elixir:release-dev}
+  formatting:
+    build:
+      context: ./../
+      dockerfile: ./.ci/Dockerfile-test
+      args:
+        elixirVersion: ${ELIXIR_VERSION:-1.11.3}
+    command: mix format --check-formatted
+    container_name: eps-api-elixir-formatting
+    image: eps-api-elixir:test
+  lint:
+    build:
+      context: ./../
+      dockerfile: ./.ci/Dockerfile-test
+      args:
+        elixirVersion: ${ELIXIR_VERSION:-1.11.3}
+    command: mix credo
+    container_name: eps-api-elixir-lint
+    image: eps-api-elixir:test
+  # Build a temporary postgres DB for tests.
+  rm-postgres-test:
+    restart: always
+    image: postgres:${PG_VERSION:-12.5}-alpine
+    container_name: rm-postgres-test
+    environment:
+      - POSTGRES_HOST_AUTH_METHOD=trust
+      - POSTGRES_PASSWORD=docker
+      - POSTGRES_USER=postgres
+  test:
+    # Ensure specific environment variables are ALWAYS available.
+    environment:
+      - DATABASE_URL=ecto://postgres:docker@rm-postgres-test/eps_test
+      - DATABASE_URL_LEGACY=${DATABASE_URL_LEGACY}
+      - LEGACY_SODIUM_SECRET_KEY=${LEGACY_SODIUM_SECRET_KEY}
+    build:
+      context: ./../
+      dockerfile: ./.ci/Dockerfile-test
+      args:
+        DATABASE_URL_LEGACY: ${DATABASE_URL_LEGACY}
+        elixirVersion: ${ELIXIR_VERSION:-1.11.3}
+        MIX_ENV: test
+    command:
+      - "sh"
+      - "-c"
+      - "mix ecto.create --repo EPS.Repo && mix coverage.html"
+    container_name: eps-api-elixir-test
+    image: eps-api-elixir:test
+    depends_on:
+      - rm-postgres-test
+    volumes:
+      - ./../cover/:/app/priv/static/cover/:delegated

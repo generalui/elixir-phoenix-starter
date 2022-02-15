@@ -1,0 +1,41 @@
+{
+  "coverage_options": {
+    "minimum_coverage": 75,
+    "output_dir": "priv/static/cover/",
+    "template_path": "coveralls_template/",
+    "treat_no_relevant_lines_as_covered": true
+  },
+  "skip_files": [
+    "lib/eps/application.ex",
+    "lib/eps/data_factory.ex",
+    "lib/eps/enums.ex",
+    "lib/eps/release_tasks",
+    "lib/eps/repo.ex",
+    "lib/eps/seeds.ex",
+    "lib/eps/data_factories",
+    "lib/eps/seeds",
+    "lib/eps/telemetry/metrics_setup.ex",
+    "lib/eps_web/auth/ueberauth",
+    "lib/eps_web/channels/user_socket.ex",
+    "lib/eps_web/context.ex",
+    "lib/eps_web/controllers/docs_controller.ex",
+    "lib/eps_web/controllers/test_coverage_controller.ex",
+    "lib/eps_web/endpoint.ex",
+    "lib/eps_web/gettext.ex",
+    "lib/eps_web/implementations/phoenix_html_safe.ex",
+    "lib/eps_web/metrics/exporter.ex",
+    "lib/eps_web/router.ex",
+    "lib/eps_web/swagger/common_definitions.ex",
+    "lib/eps_web/swagger/info.ex",
+    "lib/eps.ex",
+    "lib/eps_web.ex",
+    "test/eps",
+    "test/eps_web",
+    "test/support/channel_case.ex",
+    "test/support/conn_case.ex",
+    "test/support/data_case.ex",
+    "test/support/test_data.ex",
+    "test/support/test_model.ex",
+    "test/support/test_legacy_model.ex"
+  ]
+}
