@@ -17,7 +17,7 @@ defmodule EPSWeb.VersionControllerTest do
       assert json_response(conn, 200) == %{
                "releaseId" => app_version,
                "status" => 200,
-               "version" => "v4"
+               "version" => "v1"
              }
     end
   end

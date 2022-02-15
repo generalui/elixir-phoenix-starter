@@ -9,7 +9,7 @@ defmodule EPS.UtilsTest do
 
   describe "assert_location_values_equal" do
     test "passes when locations are equal" do
-      location = %{"lat" => 123_456.09, "long" => 12345.09}
+      location = %{lat: 123_456.09, long: 12345.09}
 
       location
       |> Recase.Enumerable.convert_keys(&Atom.to_string/1)
