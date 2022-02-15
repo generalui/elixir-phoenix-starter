@@ -6,5 +6,5 @@ ExUnit.configure(exclude: [external: true])
 
 ExUnit.start()
 Faker.start()
-Ecto.Adapters.SQL.Sandbox.mode(EPS.Repo, :manual)
+# Ecto.Adapters.SQL.Sandbox.mode(EPS.Repo, :manual)
 Code.compile_file("test/support/test_utils.exs")

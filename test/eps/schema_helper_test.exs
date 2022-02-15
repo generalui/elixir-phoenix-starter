@@ -36,7 +36,7 @@ defmodule EPS.SchemaHelperTest do
   end
 
   describe "generate_id/1" do
-    @id MACAddress.broadcast_address() |> MACAddress.to_hex()
+    @id "plokijuhyg"
 
     test "generates a GUID for an ID if no ID is passed" do
       data = %{}
