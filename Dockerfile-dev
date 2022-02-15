@@ -1,0 +1,52 @@
+# This is the development Dockerfile.
+# This should resemble the release dockerfile (located at .ci/Dockerfile-release) as closely as possible.
+ARG elixirVersion
+ARG MIX_ENV
+ARG secret_key_base
+
+FROM elixir:${elixirVersion:-1.11.3}-slim AS builder
+
+ENV MIX_ENV=${MIX_ENV:-dev} \
+  LANG=C.UTF-8 \
+  SECRET_KEY_BASE=secret_key_base
+
+# Create the application build directory
+WORKDIR /app
+
+# Copy the main application. This is in a separate layer in the image so the dependencies will be cached unless changes to one of those two files are made.
+COPY ./mix.exs ./mix.lock /app/
+# Copy the main application.
+COPY . /app
+
+# Ensure apt has the most current version of nodejs.
+RUN apt update && \
+  curl -sL https://deb.nodesource.com/setup_15.x | bash - && \
+  apt -y install \
+  build-essential \
+  # Git for use inside the container.
+  git \
+  libsodium-dev  \
+  # The postgres client for psql and the like inside the container.
+  postgresql-client \
+  # Install net-tools for debug purposes
+  net-tools \
+  # Node and NPM for getting, installing, and running git-genui.
+  nodejs \
+  npm && \
+  # For using git-genui for git commits from within the container.
+  # See https://www.npmjs.com/package/git-genui for more info.
+  npm install -g git-genui && \
+  # Install hex and rebar
+  mix local.hex --force && \
+  mix local.rebar --force
+
+# Fetch the application dependencies. This is in a separate layer in the image so the dependencies will be cached.
+RUN mix deps.get
+
+# Compile the app so the compiled code lives in the image. This is in a separate layer in the image so the compiled code will be cached.
+RUN mix deps.compile
+
+# Inside the container, execute the Python script that starts the server.
+# Only if `NO_AUTO_START` is NOT set.
+# Otherwise, tail nothing so a process will continue and the container will run.
+CMD ["sh", "-c", "if [ ${MIX_SETUP:-} ]; then mix ecto.setup; else echo 'No setup requested.'; fi; if [ ${NO_AUTO_START:-} ]; then echo 'No auto start requested.'; tail -f /dev/null; else mix phx.server; fi"]

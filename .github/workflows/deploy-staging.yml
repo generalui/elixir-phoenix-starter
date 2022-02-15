@@ -1,0 +1,110 @@
+name: Deploy Staging
+on:
+  push:
+    branches: [staging]
+
+jobs:
+  retrieveTestCoverage:
+    name: Retrieve Staging test coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get test coverage artifact download URL
+        run: |
+          artifact_url=$(curl --request GET --url https://api.github.com/repos/$GITHUB_REPOSITORY/actions/artifacts --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' --header 'Accept: application/vnd.github.v3+json' | jq -r '[.artifacts[] | select(.name == "staging-test-coverage")] | sort_by(.updated_at)[-1].archive_download_url');
+          echo "##[set-output name=latest;]$artifact_url"
+        id: artifact_url
+
+      - name: Get test coverage artifact
+        run: "curl --header 'authorization: Bearer ${{ secrets.GITHUB_TOKEN }}' -o staging-test-coverage.zip -JL ${{ steps.artifact_url.outputs.latest }} && unzip staging-test-coverage.zip -d coverage"
+
+      - name: Upload the Staging Test Coverage as an Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: staging-test-coverage
+          path: coverage/coverage-staging.html
+          retention-days: 7
+
+  buildContainer:
+    name: Build API and Push Container to Registry
+    runs-on: ubuntu-latest
+    needs: retrieveTestCoverage
+    env:
+      API_CONTAINER_NAME: rm-elixir-api-staging
+      COMPOSE_FILE: .ci/docker-compose.yml
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Get staging test coverage artifact
+        uses: actions/download-artifact@master
+        with:
+          name: staging-test-coverage
+          path: priv/static/cover
+
+      - name: Rename staging test coverage artifact
+        run: sudo mv priv/static/cover/coverage-staging.html priv/static/cover/excoveralls.html
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.ECR_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.ECR_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.DEV_AWS_DEFAULT_REGION }}
+          role-duration-seconds: 1200
+          role-session-name: aws-session-staging-ci
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+        id: login-ecr
+
+      # Pull the latest image to build, and avoid caching pull-only images.
+      # (docker pull is faster than caching in most cases.)
+      - name: Pull docker images
+        run: docker-compose pull release
+        env:
+          ELIXIR_VERSION: ${{ secrets.ELIXIR_VERSION }}
+          IMAGE_TAG: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_NAME }}:dev-latest
+
+      # In this step, this action saves a list of existing images,
+      # the cache is created without them in the post run.
+      # It also restores the cache if it exists.
+      - name: Cache docker layers
+        uses: satackey/action-docker-layer-caching@v0.0.11
+        # Ignore the failure of a step and avoid terminating the job.
+        continue-on-error: true
+        with:
+          key: ${GITHUB_REF##*/}-cache-{hash}
+          restore-keys: |
+            ${GITHUB_REF##*/}-cache-
+
+      - name: Create Release Tag
+        id: tag
+        run: |
+          version=$(awk '$1=="@version"{print $2}' mix.exs | sed "s/\"//g");
+          commit=$(echo ${{ github.sha }} | awk '{print substr($0,0,7)}');
+          echo "##[set-output name=release;]$(echo release-${version}-${commit})"
+
+      - name: Build API Container
+        run: |
+          docker-compose build release;
+          docker push $IMAGE_TAG;
+          docker tag $IMAGE_TAG $RELEASE_TAG;
+          docker push $RELEASE_TAG
+        env:
+          ELIXIR_VERSION: ${{ secrets.ELIXIR_VERSION }}
+          IMAGE_TAG: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_NAME }}:dev-latest
+          MIX_ENV: staging
+          RELEASE_TAG: ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_NAME }}:${{ steps.tag.outputs.release }}
+
+  release:
+    name: Deploy to Develop (then validate and ask to have promoted to Staging)
+    runs-on: ubuntu-latest
+    needs: buildContainer
+    steps:
+      - name: executing remote ssh commands using ssh key
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.BASTION_HOST }}
+          username: ${{ secrets.BASTION_USER }}
+          key: ${{ secrets.KEY_DEV }}
+          script: /usr/local/bin/deploy-dispatch api

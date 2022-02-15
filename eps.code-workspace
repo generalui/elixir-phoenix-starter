@@ -1,0 +1,51 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"cSpell.enableFiletypes": [
+			"dockercompose",
+			"dockerfile",
+			"elixir"
+		],
+		"editor.formatOnSave": true,
+		"editor.formatOnPaste": true,
+		"editor.wordWrap": "on",
+		"elixirLS.fetchDeps": false,
+		"elixirLS.mixEnv": "dev",
+		"emeraldwalk.runonsave": {
+			"commands": [
+				{
+					"match": "\\.exs?$",
+					"isAsync": true,
+					"cmd": "cd ${workspaceRoot} && mix format ${file}"
+				},
+			]
+		},
+		"files.associations": {
+			"*.dockerignore": "ignore",
+			".env-*": "dotenv",
+			"Dockerfile-*": "dockerfile"
+		},
+		"files.eol": "\n",
+		"remote.containers.defaultExtensions": [
+			"bierner.markdown-preview-github-styles",
+			"davidanson.vscode-markdownlint",
+			"donjayamanne.githistory",
+			"eamodio.gitlens",
+			"emeraldwalk.runonsave",
+			"github.vscode-pull-request-github",
+			"hashicorp.terraform",
+			"jakebecker.elixir-ls",
+			"mikestead.dotenv",
+			"ms-azuretools.vscode-docker",
+			"pantajoe.vscode-elixir-credo",
+			"shakram02.bash-beautify",
+			"shardulm94.trailing-spaces",
+			"streetsidesoftware.code-spell-checker"
+		],
+		"workbench.editor.highlightModifiedTabs": true
+	}
+}

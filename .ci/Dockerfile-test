@@ -1,0 +1,35 @@
+# This Dockerfile should be as similar as possible to the release Dockerfile.
+# Any changes there should also be reflected here if possible.
+ARG elixirVersion
+
+FROM elixir:${elixirVersion}-slim
+
+ARG DATABASE_URL_LEGACY
+ARG MIX_ENV
+
+ENV DATABASE_URL_LEGACY=${DATABASE_URL_LEGACY} \
+    MIX_ENV=test \
+    LANG=C.UTF-8
+
+# Create the application build directory
+WORKDIR /app
+
+# Copy over all the necessary application files and directories
+COPY ./.credo.exs ./.formatter.exs ./coveralls.json ./
+COPY ./coveralls_template ./coveralls_template/
+COPY ./priv ./priv/
+COPY ./config ./config/
+COPY ./lib ./lib/
+COPY ./test ./test/
+COPY ./mix.exs ./mix.lock ./
+
+RUN apt update && \
+    # Install net-tools for debug purposes. Install `libsodium`, required for enacl.
+    apt -y install build-essential git libsodium-dev postgresql-client net-tools && \
+    # Install hex and rebar
+    mix local.hex --force && \
+    mix local.rebar --force
+# Fetch the application dependencies
+RUN  mix deps.get
+# Compile the app so the compiled code lives in the image.
+RUN  mix deps.compile

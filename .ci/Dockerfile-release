@@ -1,0 +1,72 @@
+# This is the release Dockerfile.
+# Any other Dockerfiles created to build this code base should emulate this as closely as possible.
+ARG elixirVersion
+
+FROM elixir:${elixirVersion}-slim AS builder
+
+ARG DATABASE_URL
+ARG DATABASE_URL_LEGACY
+ARG ENCRYPTION_KEYS
+ARG LEGACY_SODIUM_SECRET_KEY
+ARG MIX_ENV
+ARG SECRET_KEY_BASE
+
+ENV LANG=C.UTF-8 \
+    DATABASE_URL=${DATABASE_URL:-nothing_yet} \
+    ENCRYPTION_KEYS=${ENCRYPTION_KEYS:-oSpY0JP74A662b1bmGYbwv/bwWkbHEWzOGy7luEchAw=} \
+    LEGACY_SODIUM_SECRET_KEY=${LEGACY_SODIUM_SECRET_KEY:-nothing_yet} \
+    MIX_ENV=${MIX_ENV:-dev} \
+    RELEASE=true \
+    SECRET_KEY_BASE=${SECRET_KEY_BASE}
+
+# Create the application build directory
+WORKDIR /app
+
+# Copy over all the necessary application files and directories
+COPY ./config ./config/
+COPY ./lib ./lib/
+COPY ./priv ./priv/
+COPY ./mix.exs ./mix.lock ./README.md ./NOTES.md ./
+
+RUN apt update && \
+    # Install net-tools for debug purposes. `libsodium` is required for enacl.
+    apt -y install build-essential git libsodium-dev postgresql-client net-tools && \
+    # Install hex and rebar
+    mix local.hex --force && \
+    mix local.rebar --force && \
+    # Fetch the application dependencies and build the application
+    mix deps.get && \
+    mix deps.compile && \
+    # Build the swagger json
+    mix swagger && \
+    # Build the json manifest file that contains static files and their digested version
+    mix phx.digest && \
+    # Build the documentation
+    mix docs && \
+    mix release
+
+FROM debian:buster-slim
+
+ARG ENCRYPTION_KEYS
+ARG MIX_ENV
+
+ENV ENCRYPTION_KEYS=${ENCRYPTION_KEYS:-oSpY0JP74A662b1bmGYbwv/bwWkbHEWzOGy7luEchAw=} \
+    MIX_ENV=${MIX_ENV:-dev} \
+    LANG=C.UTF-8
+
+WORKDIR /app
+
+# Install openssl
+RUN apt update && \
+    apt -y install openssl libncurses5-dev libncursesw5-dev libsodium-dev && \
+    groupadd -g 61000 noone && \
+    useradd -g 61000 -l -M -s /bin/false -u 61000 noone && \
+    chown noone:noone /app
+
+USER noone:noone
+
+COPY --from=builder --chown=noone:noone /app/_build/${MIX_ENV:-dev}/rel/eps ./
+
+ENV HOME=/app
+
+CMD ["bin/eps", "start"]

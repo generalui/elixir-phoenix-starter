@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="">
+    <meta name="author" content="">
+    <title>Elixir / Phoenix Starter API Login</title>
+    <link rel="shortcut icon" href="<%= Routes.static_path(@conn, "/favicon.ico") %>">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+    <link rel="stylesheet" href="<%= Routes.static_path(@conn, "/css/app.css") %>"/>
+    <!-- <script defer src="<%= Routes.static_path(@conn, "/js/app.js") %>"></script> -->
+  </head>
+  <body>
+    <a href="#nav" id="toggle-nav" class="toggle-nav" aria-label="Open navigation">
+      <span class="sr-only">Open navigation</span>
+      <span class="fa fa-bars" aria-hidden="true"></span>
+    </a>
+    <nav id="nav" class="nav">
+      <a href="#toggle-nav" class="close-nav" aria-label="Open navigation">
+        <span class="fa fa-close"></span>
+      </a>
+      <ul>
+        <%= if @is_super_admin do %><li>
+          <a title="swagger ui" href="/api/swagger">Swagger UI</a>
+        </li><li>
+          <a title="dashboard" href="<%= Routes.live_dashboard_path(@conn, :home) %>">Dashboard</a>
+        </li><%= if @env != :prod do %><li>
+          <a title="test coverage" href="<%= Routes.test_coverage_path(@conn, :index) %>">Test Coverage</a>
+        </li><li>
+          <a title="Code Documentation" href="<%= Routes.docs_path(@conn, :index, %{}) %>">Documentation</a>
+        </li><% end %><% end %>
+      </ul>
+      <a href="#toggle-nav" class="backdrop" tabindex="-1" aria-hidden="true"></a>
+    </nav>
+    <main class="container">
+      <p class="alert alert-info" role="alert"><%= get_flash(@conn, :info) %></p>
+      <p class="alert alert-danger" role="alert"><%= get_flash(@conn, :error) %></p>
+      <%= @inner_content %>
+    </main>
+  </body>
+</html>

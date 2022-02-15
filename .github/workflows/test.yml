@@ -1,0 +1,126 @@
+name: Validate Formatting, Lint, and Test Code
+on:
+  pull_request:
+    branches: [develop, staging]
+    types: [opened, reopened, synchronize]
+
+jobs:
+  formatting:
+    name: Validate Code Formatting
+    runs-on: ubuntu-latest
+    env:
+      COMPOSE_FILE: .ci/docker-compose.yml
+    steps:
+      - name: Get target branch
+        run: echo "##[set-output name=branch;]$(echo ${{ github.event.pull_request.base.ref }})"
+        id: target_branch
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # In this step, this action saves a list of existing images,
+      # the cache is created without them in the post run.
+      # It also restores the cache if it exists.
+      - name: Cache docker layers
+        uses: satackey/action-docker-layer-caching@v0.0.11
+        # Ignore the failure of a step and avoid terminating the job.
+        continue-on-error: true
+        with:
+          key: ${{ steps.target_branch.outputs.branch }}-cache-{hash}
+          restore-keys: |
+            ${{ steps.target_branch.outputs.branch }}-cache-
+
+      - name: Check Formatting
+        run: docker-compose run formatting
+        env:
+          ELIXIR_VERSION: ${{ secrets.ELIXIR_VERSION }}
+
+  lint:
+    name: Lint Code Base
+    runs-on: ubuntu-latest
+    needs: formatting
+    env:
+      COMPOSE_FILE: .ci/docker-compose.yml
+    steps:
+      - name: Get target branch
+        run: echo "##[set-output name=branch;]$(echo ${{ github.event.pull_request.base.ref }})"
+        id: target_branch
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Pull the latest image to build, and avoid caching pull-only images.
+      # (docker pull is faster than caching in most cases.)
+      - name: Pull docker images
+        run: docker-compose pull lint
+        env:
+          ELIXIR_VERSION: ${{ secrets.ELIXIR_VERSION }}
+
+      # In this step, this action saves a list of existing images,
+      # the cache is created without them in the post run.
+      # It also restores the cache if it exists.
+      - name: Cache docker layers
+        uses: satackey/action-docker-layer-caching@v0.0.11
+        # Ignore the failure of a step and avoid terminating the job.
+        continue-on-error: true
+        with:
+          key: ${{ steps.target_branch.outputs.branch }}-cache-{hash}
+          restore-keys: |
+            ${{ steps.target_branch.outputs.branch }}-cache-
+
+      - name: Lint
+        run: docker-compose run lint
+        env:
+          ELIXIR_VERSION: ${{ secrets.ELIXIR_VERSION }}
+
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    needs: [formatting, lint]
+    env:
+      COMPOSE_FILE: .ci/docker-compose.yml
+    steps:
+      - name: Get target branch
+        run: echo "##[set-output name=branch;]$(echo ${{ github.event.pull_request.base.ref }})"
+        id: target_branch
+
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Pull the latest image to build, and avoid caching pull-only images.
+      # (docker pull is faster than caching in most cases.)
+      - name: Pull docker images
+        run: docker-compose pull rm-postgres-test && docker-compose pull test
+        env:
+          ELIXIR_VERSION: ${{ secrets.ELIXIR_VERSION }}
+          PG_VERSION: ${{ secrets.PG_VERSION }}
+
+      # In this step, this action saves a list of existing images,
+      # the cache is created without them in the post run.
+      # It also restores the cache if it exists.
+      - name: Cache docker layers
+        uses: satackey/action-docker-layer-caching@v0.0.11
+        # Ignore the failure of a step and avoid terminating the job.
+        continue-on-error: true
+        with:
+          key: ${{ steps.target_branch.outputs.branch }}-cache-{hash}
+          restore-keys: |
+            ${{ steps.target_branch.outputs.branch }}-cache-
+
+      - name: Run tests
+        run: docker-compose run test
+        env:
+          DATABASE_URL_LEGACY: ${{ secrets.DATABASE_URL_LEGACY_DEV }}
+          ELIXIR_VERSION: ${{ secrets.ELIXIR_VERSION }}
+          LEGACY_SODIUM_SECRET_KEY: ${{ secrets.LEGACY_SODIUM_SECRET_KEY_DEV }}
+          PG_VERSION: ${{ secrets.PG_VERSION }}
+
+      - name: Get the coverage file.
+        run: sudo cp cover/excoveralls.html cover/coverage-${{ steps.target_branch.outputs.branch }}.html
+
+      - name: Upload the Coverage as an Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: ${{ steps.target_branch.outputs.branch }}-test-coverage
+          path: cover/coverage-${{ steps.target_branch.outputs.branch }}.html
+          retention-days: 1

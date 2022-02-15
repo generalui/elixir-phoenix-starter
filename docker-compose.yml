@@ -1,0 +1,36 @@
+version: "3.8"
+
+services:
+  api:
+    env_file: ${DOT_ENV_FILE:-.env-none}
+    # Ensure specific environment variables are ALWAYS available.
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgres://postgres:docker@host.docker.internal/eps_dev}
+      - PORT=${PORT:-4000}
+      - SECRET_KEY_BASE=${SECRET_KEY_BASE:-1vd1kSjcDoIt0hmoJMCRwM7Qx8y2EyhYESCcW+ytSXQ=}
+    build:
+      context: ./
+      dockerfile: Dockerfile-dev
+      args:
+        MIX_ENV: ${MIX_ENV:-dev}
+        elixirVersion: ${ELIXIR_VERSION:-1.11.3}
+        secret_key_base: ${SECRET_KEY_BASE:-ZnfvXfq91z5om0lWqBxlTce32/0vJqReJ8vngKJAtx8hyPIJpKhcZfDt//34oSAw}
+    command:
+      - "sh"
+      - "-c"
+      - "if [ ${MIX_SETUP:-} ]; then mix ecto.setup; else echo 'No setup requested.'; fi; if [ ${NO_AUTO_START:-} ]; then echo 'No auto start requested.'; tail -f /dev/null; else mix phx.server; fi"
+    container_name: eps-api-elixir-dev
+    image: eps-api-elixir:dev
+    ports:
+      - ${PORT:-4000}:${PORT:-4000}
+    volumes:
+      - .:/app:delegated
+      - ~/.gitconfig:/root/.gitconfig:delegated
+      - ~/.ssh:/root/.ssh:delegated
+      - eps-api-elixir-root-vol:/root:delegated
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+volumes:
+  eps-api-elixir-root-vol:
