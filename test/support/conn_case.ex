@@ -47,21 +47,21 @@ defmodule EPSWeb.ConnCase do
     end
   end
 
-  # setup tags do
-  #   :ok = Ecto.Adapters.SQL.Sandbox.checkout(EPS.Repo)
+  setup tags do
+    # :ok = Ecto.Adapters.SQL.Sandbox.checkout(EPS.Repo)
 
-  #   unless tags[:async] do
-  #     Ecto.Adapters.SQL.Sandbox.mode(EPS.Repo, {:shared, self()})
-  #   end
+    # unless tags[:async] do
+    #   Ecto.Adapters.SQL.Sandbox.mode(EPS.Repo, {:shared, self()})
+    # end
 
-  #   if tags[:legacy] do
-  #     :ok = Ecto.Adapters.SQL.Sandbox.checkout(EPS.LegacyRepo)
+    # if tags[:legacy] do
+    #   :ok = Ecto.Adapters.SQL.Sandbox.checkout(EPS.LegacyRepo)
 
-  #     unless tags[:async] do
-  #       Ecto.Adapters.SQL.Sandbox.mode(EPS.LegacyRepo, {:shared, self()})
-  #     end
-  #   end
+    #   unless tags[:async] do
+    #     Ecto.Adapters.SQL.Sandbox.mode(EPS.LegacyRepo, {:shared, self()})
+    #   end
+    # end
 
-  #   {:ok, conn: Phoenix.ConnTest.build_conn() |> init_test_session(%{})}
-  # end
+    {:ok, conn: Phoenix.ConnTest.build_conn() |> init_test_session(%{})}
+  end
 end
