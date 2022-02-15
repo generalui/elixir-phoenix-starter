@@ -7,15 +7,6 @@ defmodule EPS.TestUtils do
 
   alias EPS.SchemaHelper
 
-  def assert_location_values_equal(location_json, location_db) do
-    assert location_json["floor"] == location_db.floor
-    assert location_json["integration"] == location_db.integration
-    assert location_json["lat"] == location_db.lat
-    assert location_json["long"] == location_db.long
-    assert location_json["property"] == location_db.property
-    assert location_json["room"] == location_db.room
-  end
-
   def is_map_fully_replicated?(original_map, new_map) do
     original_map
     |> Enum.reduce(true, fn {key, item}, accum ->

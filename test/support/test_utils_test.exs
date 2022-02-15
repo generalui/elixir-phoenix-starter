@@ -7,16 +7,6 @@ defmodule EPS.UtilsTest do
 
   alias EPS.TestUtils
 
-  describe "assert_location_values_equal" do
-    test "passes when locations are equal" do
-      location = %{lat: 123_456.09, long: 12345.09}
-
-      location
-      |> Recase.Enumerable.convert_keys(&Atom.to_string/1)
-      |> TestUtils.assert_location_values_equal(location)
-    end
-  end
-
   describe "is_map_fully_replicated?" do
     test "it fails when any primitive properties in the original map are not the same in copied map" do
       map1 = %{:key1 => "value1", :key2 => "value2", :key3 => "value3"}
